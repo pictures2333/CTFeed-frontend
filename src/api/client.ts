@@ -5,6 +5,19 @@ export type ApiResult<T> = {
   status: number;
   data: T | null;
   error: string | null;
+  errorData: unknown | null;
+};
+
+const sanitizeNumbers = (text: string) => {
+  // Wrap all JSON numbers in quotes to avoid precision loss.
+  return text
+    .replace(/(:\s*)(-?\d+(?:\.\d+)?)(?=[,\}\]])/g, '$1"$2"')
+    .replace(/([\[,]\s*)(-?\d+(?:\.\d+)?)(?=[,\]\}])/g, '$1"$2"');
+};
+
+const safeJsonParse = (text: string) => {
+  const sanitized = sanitizeNumbers(text);
+  return JSON.parse(sanitized);
 };
 
 export async function apiRequest<T>(
@@ -23,14 +36,14 @@ export async function apiRequest<T>(
     });
     const contentType = response.headers.get("content-type") ?? "";
     const hasJson = contentType.includes("application/json");
-    const data = hasJson ? await response.json() : null;
+    const data = hasJson ? safeJsonParse(await response.text()) : null;
     if (!response.ok) {
       const message = typeof data?.message === "string" ? data.message : `HTTP ${response.status}`;
-      return { ok: false, status: response.status, data: null, error: message };
+      return { ok: false, status: response.status, data, error: message, errorData: data };
     }
-    return { ok: true, status: response.status, data, error: null };
+    return { ok: true, status: response.status, data, error: null, errorData: null };
   } catch (error) {
     const message = error instanceof Error ? error.message : "Network error";
-    return { ok: false, status: 0, data: null, error: message };
+    return { ok: false, status: 0, data: null, error: message, errorData: null };
   }
 }

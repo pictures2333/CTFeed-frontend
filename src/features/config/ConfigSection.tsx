@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { apiRequest } from "../../api/client";
 import { API_ENDPOINTS } from "../../api/endpoints";
 import type { ConfigItem, ConfigResponse, GeneralResponse } from "../../api/types";
+import Modal from "../../components/Modal";
 
 type ConfigState = ConfigItem & { draft: string };
 
@@ -9,6 +10,35 @@ export default function ConfigSection() {
   const [configs, setConfigs] = useState<ConfigState[]>([]);
   const [notice, setNotice] = useState("");
   const [canEdit, setCanEdit] = useState(true);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalTitle, setModalTitle] = useState("");
+  const [modalMessage, setModalMessage] = useState("");
+
+  const formatErrorDetails = (data: unknown) => {
+    if (!data) return "";
+    try {
+      return JSON.stringify(data, null, 2);
+    } catch {
+      return String(data);
+    }
+  };
+
+  const formatValue = (value: unknown) => {
+    if (value === null || value === undefined) return "";
+    if (typeof value === "string") return value;
+    try {
+      return JSON.stringify(value, null, 2);
+    } catch {
+      return String(value);
+    }
+  };
+
+  const getConfigKind = (key: string) => {
+    if (key.endsWith("CHANNEL_ID")) return "Channel";
+    if (key.endsWith("CATEGORY_ID")) return "Category";
+    if (key.endsWith("ROLE_ID")) return "Role";
+    return "";
+  };
 
   const loadConfig = async () => {
     const result = await apiRequest<ConfigResponse>(API_ENDPOINTS.config.list);
@@ -23,7 +53,8 @@ export default function ConfigSection() {
       setCanEdit(true);
     } else {
       setConfigs([]);
-      setNotice(result.error ?? "Failed to load config");
+      const detail = formatErrorDetails(result.errorData);
+      setNotice(detail ? `${result.error ?? "Failed to load config"}\n${detail}` : result.error ?? "Failed to load config");
       setCanEdit(result.status !== 403);
     }
   };
@@ -34,17 +65,20 @@ export default function ConfigSection() {
 
   const updateConfig = async (item: ConfigState) => {
     if (!canEdit) return;
-    const trimmed = item.draft.trim();
-    const asNumber = Number(trimmed);
-    const value =
-      trimmed !== "" && Number.isFinite(asNumber) && String(asNumber) === trimmed
-        ? asNumber
-        : item.draft;
     const result = await apiRequest<GeneralResponse>(API_ENDPOINTS.config.update(item.key), {
       method: "PATCH",
-      body: JSON.stringify({ value }),
+      body: JSON.stringify({ value: item.draft }),
     });
-    setNotice(result.ok ? "Config updated" : result.error ?? "Failed to update config");
+    setModalTitle(result.ok ? "Success" : "Failed");
+    const detail = result.ok ? "" : formatErrorDetails(result.errorData);
+    setModalMessage(
+      result.ok
+        ? "Config updated"
+        : detail
+          ? `${result.error ?? "Failed to update config"}\n${detail}`
+          : result.error ?? "Failed to update config"
+    );
+    setModalOpen(true);
     if (result.ok) {
       loadConfig();
     }
@@ -68,6 +102,18 @@ export default function ConfigSection() {
             <div>
               <div className="list-title">{item.key}</div>
               <p className="muted">{item.description}</p>
+              <div className="config-meta">
+                <div className="config-value-row">
+                  <span className="config-value-label">Value</span>
+                  <span className="config-value-text">{formatValue(item.value)}</span>
+                </div>
+                {getConfigKind(item.key) && (
+                  <div className="config-mapped">
+                    <span className="config-mapped-label">Type</span>
+                    <span className="config-mapped-badge">{getConfigKind(item.key)}</span>
+                  </div>
+                )}
+              </div>
               <p className={item.ok ? "status ok" : "status error"}>{item.message}</p>
             </div>
             <div className="config-edit">
@@ -95,6 +141,14 @@ export default function ConfigSection() {
         ))}
         {configs.length === 0 && canEdit && <p className="muted">No config items.</p>}
       </div>
+      <Modal
+        open={modalOpen}
+        variant="alert"
+        title={modalTitle}
+        message={modalMessage}
+        onCancel={() => setModalOpen(false)}
+        onConfirm={() => setModalOpen(false)}
+      />
     </section>
   );
 }

@@ -10,11 +10,9 @@ export default function HomePage({ onLogin }: HomePageProps) {
       <div className="home-card">
         <img className="logo" src={APP_CONFIG.logoUrl} alt={APP_CONFIG.appTitle} />
         <h1>{APP_CONFIG.appTitle}</h1>
-        <p className="home-subtitle">CTF Operations Dashboard</p>
         <button className="primary" type="button" onClick={onLogin}>
-          透過 Discord 登入
+          Login with Discord
         </button>
-        <p className="home-note">Login is handled by Discord OAuth2.</p>
       </div>
     </main>
   );

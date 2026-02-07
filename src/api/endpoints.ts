@@ -6,17 +6,19 @@ export const API_ENDPOINTS = {
     me: "/auth/me",
   },
   events: {
-    list: "/event",
+    list: "/event/",
     createCustom: "/event/create_custom_event",
-    join: (id: number) => `/event/${id}/join`,
-    archive: (id: number) => `/event/${id}/archive`,
-    relink: (id: number) => `/event/${id}/relink`,
+    detail: (id: string) => `/event/${id}`,
+    join: (id: string) => `/event/${id}/join`,
+    archive: (id: string) => `/event/${id}/archive`,
+    relink: (id: string) => `/event/${id}/relink`,
   },
   users: {
-    list: "/user",
+    list: "/user/",
+    detail: (id: string) => `/user/${id}`,
   },
   config: {
-    list: "/config",
+    list: "/config/",
     update: (key: string) => `/config/${key}`,
   },
 };

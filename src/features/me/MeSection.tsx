@@ -3,6 +3,7 @@ import { apiRequest } from "../../api/client";
 import { API_ENDPOINTS } from "../../api/endpoints";
 import type { GeneralResponse, User } from "../../api/types";
 import { RHYTHM_OPTIONS, SKILL_OPTIONS, STATUS_OPTIONS } from "../../constants/userOptions";
+import Modal from "../../components/Modal";
 
 export default function MeSection() {
   const [user, setUser] = useState<User | null>(null);
@@ -11,24 +12,32 @@ export default function MeSection() {
   const [status, setStatus] = useState<string>("");
   const [skills, setSkills] = useState<string[]>([]);
   const [rhythmGames, setRhythmGames] = useState<string[]>([]);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalTitle, setModalTitle] = useState("");
+  const [modalMessage, setModalMessage] = useState("");
+
+  const loadProfile = async () => {
+    setLoading(true);
+    const result = await apiRequest<User>(API_ENDPOINTS.auth.me);
+    if (result.ok && result.data) {
+      setUser(result.data);
+      setStatus(result.data.status);
+      setSkills(result.data.skills ?? []);
+      setRhythmGames(result.data.rhythm_games ?? []);
+      setNotice("");
+    } else {
+      setUser(null);
+      const detail = result.errorData
+        ? `\n${JSON.stringify(result.errorData, null, 2)}`
+        : "";
+      setNotice(detail ? `${result.error ?? "Failed to load profile"}${detail}` : result.error ?? "Failed to load profile");
+    }
+    setLoading(false);
+  };
 
   useEffect(() => {
-    const load = async () => {
-      setLoading(true);
-      const result = await apiRequest<User>(API_ENDPOINTS.auth.me);
-      if (result.ok && result.data) {
-        setUser(result.data);
-        setStatus(result.data.status);
-        setSkills(result.data.skills ?? []);
-        setRhythmGames(result.data.rhythm_games ?? []);
-        setNotice("");
-      } else {
-        setUser(null);
-        setNotice(result.error ?? "Failed to load profile");
-      }
-      setLoading(false);
-    };
-    load();
+    loadProfile();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const toggleItem = (value: string, list: string[], setter: (next: string[]) => void) => {
@@ -50,7 +59,19 @@ export default function MeSection() {
       method: "PATCH",
       body: JSON.stringify(payload),
     });
-    setNotice(result.ok ? "Profile updated" : result.error ?? "Failed to update profile");
+    setModalTitle(result.ok ? "Success" : "Failed");
+    const detail = result.ok
+      ? ""
+      : result.errorData
+        ? `\n${JSON.stringify(result.errorData, null, 2)}`
+        : "";
+    setModalMessage(
+      result.ok
+        ? "Profile updated"
+        : `${result.error ?? "Failed to update profile"}${detail}`
+    );
+    setModalOpen(true);
+    await loadProfile();
   };
 
   return (
@@ -117,6 +138,14 @@ export default function MeSection() {
           </form>
         </div>
       )}
+      <Modal
+        open={modalOpen}
+        variant="alert"
+        title={modalTitle}
+        message={modalMessage}
+        onCancel={() => setModalOpen(false)}
+        onConfirm={() => setModalOpen(false)}
+      />
     </section>
   );
 }

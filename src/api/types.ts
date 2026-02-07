@@ -1,19 +1,19 @@
 export type DiscordChannel = {
-  id: number;
+  id: string;
   jump_url: string;
   name: string;
 };
 
 export type EventItem = {
-  id: number;
+  id: string;
   archived: boolean;
-  event_id?: number | null;
+  event_id?: string | null;
   title: string;
-  start?: number | null;
-  finish?: number | null;
-  channel_id?: number | null;
+  start?: string | null;
+  finish?: string | null;
+  channel_id?: string | null;
   channel?: DiscordChannel | null;
-  scheduled_event_id?: number | null;
+  scheduled_event_id?: string | null;
   now_running?: boolean | null;
   type: "ctftime" | "custom";
   users?: UserSimple[];
@@ -21,12 +21,12 @@ export type EventItem = {
 
 export type DiscordUser = {
   display_name: string;
-  id: number;
+  id: string;
   name: string;
 };
 
 export type UserSimple = {
-  discord_id: number;
+  discord_id: string;
   status: string;
   skills: string[];
   rhythm_games: string[];
@@ -46,7 +46,7 @@ export type ConfigItem = {
 };
 
 export type ConfigResponse = {
-  guild_id: number;
+  guild_id: string;
   guild_name: string;
   config: ConfigItem[];
 };

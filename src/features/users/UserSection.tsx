@@ -3,7 +3,12 @@ import { apiRequest } from "../../api/client";
 import { API_ENDPOINTS } from "../../api/endpoints";
 import type { User } from "../../api/types";
 
-export default function UserSection() {
+type UserSectionProps = {
+  selectedUserId: string | null;
+  onSelectUser: (id: string) => void;
+};
+
+export default function UserSection({ selectedUserId, onSelectUser }: UserSectionProps) {
   const [users, setUsers] = useState<User[]>([]);
   const [selected, setSelected] = useState<User | null>(null);
   const [notice, setNotice] = useState("");
@@ -13,7 +18,14 @@ export default function UserSection() {
       const result = await apiRequest<User[]>(API_ENDPOINTS.users.list);
       if (result.ok && result.data) {
         setUsers(result.data);
-        setSelected(result.data[0] ?? null);
+        const nextSelected =
+          result.data.find((user) => user.discord_id === selectedUserId) ??
+          result.data[0] ??
+          null;
+        setSelected(nextSelected);
+        if (nextSelected && nextSelected.discord_id !== selectedUserId) {
+          onSelectUser(nextSelected.discord_id);
+        }
         setNotice("");
       } else {
         setUsers([]);
@@ -22,7 +34,24 @@ export default function UserSection() {
       }
     };
     load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (!selectedUserId) return;
+    const loadById = async () => {
+      const result = await apiRequest<User[]>(API_ENDPOINTS.users.detail(selectedUserId));
+      const user = result.ok && result.data ? result.data[0] : null;
+      if (!user) return;
+      setSelected(user);
+      setUsers((prev) =>
+        prev.some((item) => item.discord_id === user.discord_id)
+          ? prev.map((item) => (item.discord_id === user.discord_id ? user : item))
+          : prev
+      );
+    };
+    loadById();
+  }, [selectedUserId]);
 
   return (
     <section className="section">
@@ -31,14 +60,17 @@ export default function UserSection() {
       </div>
       {notice && <p className="notice">{notice}</p>}
       <div className="grid">
-        <div className="list">
+        <div className="list scrollable">
           {users.length === 0 && <p className="muted">No users found.</p>}
           {users.map((user) => (
             <button
               key={user.discord_id}
               type="button"
               className={selected?.discord_id === user.discord_id ? "list-item active" : "list-item"}
-              onClick={() => setSelected(user)}
+              onClick={() => {
+                setSelected(user);
+                onSelectUser(user.discord_id);
+              }}
             >
               <div className="list-title">
                 {user.discord?.display_name ?? user.discord?.name ?? `User ${user.discord_id}`}

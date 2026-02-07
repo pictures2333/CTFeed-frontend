@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { apiRequest } from "./api/client";
 import { API_ENDPOINTS } from "./api/endpoints";
 import type { User } from "./api/types";
@@ -12,11 +12,55 @@ import ConfigSection from "./features/config/ConfigSection";
 
 type SectionKey = "events" | "me" | "users" | "config";
 
+type RouteState = {
+  section: SectionKey;
+  eventId?: string | null;
+  userId?: string | null;
+};
+
+const parsePath = (pathname: string): RouteState => {
+  if (pathname.startsWith("/event")) {
+    const id = pathname.split("/")[2];
+    return { section: "events", eventId: id ?? null };
+  }
+  if (pathname.startsWith("/user")) {
+    const id = pathname.split("/")[2];
+    return { section: "users", userId: id ?? null };
+  }
+  if (pathname.startsWith("/me")) {
+    return { section: "me" };
+  }
+  if (pathname.startsWith("/config")) {
+    return { section: "config" };
+  }
+  return { section: "events" };
+};
+
+const buildPath = (section: SectionKey, eventId?: string | null, userId?: string | null) => {
+  if (section === "events") {
+    return eventId ? `/event/${eventId}` : "/event";
+  }
+  if (section === "users") {
+    return userId ? `/user/${userId}` : "/user";
+  }
+  if (section === "me") {
+    return "/me";
+  }
+  return "/config";
+};
+
 export default function App() {
   const [checking, setChecking] = useState(true);
   const [authenticated, setAuthenticated] = useState(false);
   const [section, setSection] = useState<SectionKey>("events");
   const [profile, setProfile] = useState<User | null>(null);
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+
+  const userName = useMemo(
+    () => profile?.discord?.display_name ?? profile?.discord?.name ?? "Me",
+    [profile]
+  );
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -24,7 +68,11 @@ export default function App() {
       if (result.ok && result.data) {
         setAuthenticated(true);
         setProfile(result.data);
-        window.history.replaceState({}, "", "/dashboard");
+        const route = parsePath(window.location.pathname);
+        setSection(route.section);
+        setSelectedEventId(route.eventId ?? null);
+        setSelectedUserId(route.userId ?? null);
+        window.history.replaceState({}, "", buildPath(route.section, route.eventId, route.userId));
       } else {
         setAuthenticated(false);
         setProfile(null);
@@ -34,6 +82,32 @@ export default function App() {
     };
     checkAuth();
   }, []);
+
+  useEffect(() => {
+    const handlePopState = () => {
+      const route = parsePath(window.location.pathname);
+      setSection(route.section);
+      setSelectedEventId(route.eventId ?? null);
+      setSelectedUserId(route.userId ?? null);
+    };
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
+
+  const navigate = useCallback(
+    (nextSection: SectionKey, nextEventId?: string | null, nextUserId?: string | null) => {
+      const path = buildPath(nextSection, nextEventId, nextUserId);
+      window.history.pushState({}, "", path);
+      setSection(nextSection);
+      setSelectedEventId(nextEventId ?? null);
+      setSelectedUserId(nextUserId ?? null);
+    },
+    []
+  );
+
+  const handleSectionChange = useCallback((next: SectionKey) => navigate(next), [navigate]);
+  const handleSelectEvent = useCallback((id: string) => navigate("events", id), [navigate]);
+  const handleSelectUser = useCallback((id: string) => navigate("users", null, id), [navigate]);
 
   const handleLogin = () => {
     window.location.href = `${APP_CONFIG.apiBaseUrl}${API_ENDPOINTS.auth.discord}`;
@@ -57,17 +131,27 @@ export default function App() {
 
   return (
     <div className="app">
-      <TopBar section={section} onSectionChange={setSection} onLogout={handleLogout} />
+      <TopBar
+        section={section}
+        onSectionChange={handleSectionChange}
+        onLogout={handleLogout}
+        userName={userName}
+      />
       <main className="content">
-        {section === "events" && <EventSection />}
-        {section === "me" && <MeSection />}
-        {section === "users" && <UserSection />}
-        {section === "config" && <ConfigSection />}
-        {profile && (
-          <footer className="footer">
-            Signed in as {profile.discord?.display_name ?? profile.discord?.name ?? profile.discord_id}
-          </footer>
+        {section === "events" && (
+          <EventSection
+            selectedEventId={selectedEventId}
+            onSelectEvent={handleSelectEvent}
+          />
         )}
+        {section === "me" && <MeSection />}
+        {section === "users" && (
+          <UserSection
+            selectedUserId={selectedUserId}
+            onSelectUser={handleSelectUser}
+          />
+        )}
+        {section === "config" && <ConfigSection />}
       </main>
     </div>
   );
