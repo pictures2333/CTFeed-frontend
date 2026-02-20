@@ -11,6 +11,7 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/master' && github.repository == 'ICEDTEACTF/CTFeed-frontend'
     permissions:
       contents: read
     environment: production
