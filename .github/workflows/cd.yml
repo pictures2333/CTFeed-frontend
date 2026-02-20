@@ -1,0 +1,46 @@
+name: CD
+
+on:
+  push:
+    branches: ["master"]
+
+concurrency:
+  group: deploy-master
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    environment: production
+
+    steps:
+      - name: setup ssh
+        shell: bash
+        run: |
+          set -euo pipefail
+          
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+
+          printf '%s\n' "${{ secrets.SSH_SECRET_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+
+          printf '%s\n' "${{ secrets.SSH_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+      - name: deploy
+        run: |
+          set -euo pipefail
+          ssh -i ~/.ssh/id_rsa \
+            -o IdentitiesOnly=yes \
+            -o StrictHostKeyChecking=yes \
+            -p 22 \
+            "deploy@${{ secrets.SSH_HOST }}" \
+            'set -euo pipefail
+             cd /srv/CTFeed-frontend
+             git fetch --all --prune
+             git reset --hard origin/master
+             npm ci
+             npm run build'
