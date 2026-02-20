@@ -9,6 +9,7 @@ type TopBarProps = {
   onLogout: () => void;
   userName: string;
   userRoles: string[];
+  backendVersion: string;
 };
 
 const MENU_ITEMS: { key: SectionKey; label: string }[] = [
@@ -26,7 +27,14 @@ const getRoleClassName = (role: string) => {
   return "role-none";
 };
 
-export default function TopBar({ section, onSectionChange, onLogout, userName, userRoles }: TopBarProps) {
+export default function TopBar({
+  section,
+  onSectionChange,
+  onLogout,
+  userName,
+  userRoles,
+  backendVersion,
+}: TopBarProps) {
   const orderedMenuItems = [
     ...MENU_ITEMS.filter((item) => item.key !== "me"),
     ...MENU_ITEMS.filter((item) => item.key === "me"),
@@ -52,6 +60,7 @@ export default function TopBar({ section, onSectionChange, onLogout, userName, u
     ? APP_CONFIG.backendGithubUrl
     : "https://github.com/";
   const safeCommitId = /^[0-9a-f]{7,40}$/i.test(APP_CONFIG.commitId) ? APP_CONFIG.commitId : "";
+  const safeBackendVersion = backendVersion.trim();
   const safeRoles = userRoles.length > 0 ? userRoles : ["N/A"];
 
   const renderMeLabel = () => (
@@ -101,6 +110,7 @@ export default function TopBar({ section, onSectionChange, onLogout, userName, u
           >
             <img className="github-icon" src="/github-logo.svg" alt="GitHub" />
             <span className="repo-label">CTFeed</span>
+            {safeBackendVersion && <span className="repo-commit">#{safeBackendVersion}</span>}
           </a>
         </div>
       </div>
