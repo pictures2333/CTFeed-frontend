@@ -45,8 +45,11 @@ export default function TopBar({ section, onSectionChange, onLogout, userName, u
     return () => window.removeEventListener("click", handleClick);
   }, []);
 
-  const safeGithubUrl = APP_CONFIG.githubUrl.startsWith("https://github.com/")
-    ? APP_CONFIG.githubUrl
+  const safeFrontendGithubUrl = APP_CONFIG.frontendGithubUrl.startsWith("https://github.com/")
+    ? APP_CONFIG.frontendGithubUrl
+    : "https://github.com/";
+  const safeBackendGithubUrl = APP_CONFIG.backendGithubUrl.startsWith("https://github.com/")
+    ? APP_CONFIG.backendGithubUrl
     : "https://github.com/";
   const safeCommitId = /^[0-9a-f]{7,40}$/i.test(APP_CONFIG.commitId) ? APP_CONFIG.commitId : "";
   const safeRoles = userRoles.length > 0 ? userRoles : ["N/A"];
@@ -75,17 +78,31 @@ export default function TopBar({ section, onSectionChange, onLogout, userName, u
           <img className="logo small" src={APP_CONFIG.logoUrl} alt={APP_CONFIG.appTitle} />
           <span>{APP_CONFIG.appTitle}</span>
         </button>
-        <a
-          className="menu-item github-button"
-          href={safeGithubUrl}
-          target="_blank"
-          rel="noreferrer"
-          aria-label="GitHub Repository"
-          title="GitHub Repository"
-        >
-          <img className="github-icon" src="/github-logo.svg" alt="GitHub" />
-        </a>
-        {safeCommitId && <span className="commit-id">#{safeCommitId}</span>}
+        <div className="repo-links">
+          <a
+            className="repo-badge repo-badge-frontend"
+            href={safeFrontendGithubUrl}
+            target="_blank"
+            rel="noreferrer"
+            aria-label="Frontend GitHub Repository"
+            title="Frontend GitHub Repository"
+          >
+            <img className="github-icon" src="/github-logo.svg" alt="GitHub" />
+            <span className="repo-label">CTFeed-frontend</span>
+            {safeCommitId && <span className="repo-commit">#{safeCommitId}</span>}
+          </a>
+          <a
+            className="repo-badge repo-badge-backend"
+            href={safeBackendGithubUrl}
+            target="_blank"
+            rel="noreferrer"
+            aria-label="Backend GitHub Repository"
+            title="Backend GitHub Repository"
+          >
+            <img className="github-icon" src="/github-logo.svg" alt="GitHub" />
+            <span className="repo-label">CTFeed</span>
+          </a>
+        </div>
       </div>
       <nav className="menu">
         {orderedMenuItems.map((item) => (
